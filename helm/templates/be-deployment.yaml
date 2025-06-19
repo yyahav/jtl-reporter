@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "be.fullname" . }}
+  labels:
+    {{- include "jtl-reporter.labels" (dict "component" "be" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "be" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "be" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "jtl-reporter.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: be
+          image: "{{ .Values.be.image.repository }}:{{ .Values.be.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.be.service.port }}
+              protocol: TCP
+          livenessProbe:
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            exec:
+              command:
+                - pgrep
+                - node
+          readinessProbe:
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            exec:
+              command:
+                - pgrep
+                - node
+          startupProbe:
+            initialDelaySeconds: 10
+            failureThreshold: 14
+            periodSeconds: 5
+            exec:
+              command:
+                - pgrep
+                - node
+          env:
+            - name: DB_HOST
+              value: db
+            - name: JWT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: jtlreporter_token
+            - name: JWT_TOKEN_LOGIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: jtlreporter_token_login
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Always

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "db.fullname" . }}
+  labels:
+    {{- include "jtl-reporter.labels" (dict "component" "db" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "db" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "db" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "jtl-reporter.serviceAccountName" . }}
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: db
+          image: "{{ .Values.db.image.repository }}:{{ .Values.db.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.db.service.port }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/postgresql
+              name: db-claim0
+          livenessProbe:
+            exec:
+              command:
+                - /usr/lib/postgresql/17/bin/pg_isready
+                - -U
+                - postgres
+            failureThreshold: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /usr/lib/postgresql/17/bin/pg_isready
+                - -U
+                - postgres
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            exec:
+              command:
+                - /usr/lib/postgresql/17/bin/pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 10
+            failureThreshold: 14
+            periodSeconds: 5
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+      restartPolicy: Always
+      volumes:
+        - name: db-claim0
+          persistentVolumeClaim:
+            claimName: db-claim0

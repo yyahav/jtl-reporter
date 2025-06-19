@@ -1,0 +1,128 @@
+replicaCount: 1
+
+image:
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+secretName: jtl-reporter-secret
+configMapName: jtl-reporter-config
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podAnnotations:
+  fluentbit.io/exclude: "true"
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - paths: [/jtl-reporter]
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+hpa:
+  enabled: false
+
+resources: {}
+#   requests:
+#     memory: "1200Mi"
+#     cpu: "500m"
+#   limits:
+#     memory: "1800Mi"
+#     cpu: "1000m"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+fe:
+  image:
+    repository: novyl/jtl-reporter-fe
+    tag: v5.0.3
+  env:
+    # To be used with reverse proxy - see more info here: https://github.com/ludeknovy/jtl-reporter/issues/323
+    # - name: BASE_HREF
+    #   value: /jtl-reporter/
+    # - name: API_PREFIX
+    #   value: /jtl-reporter/api
+  service:
+    type: ClusterIP
+    port: 2020
+
+be:
+  image:
+    repository: novyl/jtl-reporter-be
+    tag: v5.0.5
+  service:
+    type: ClusterIP
+    port: 5000
+    
+db:
+  image:
+    repository: jtl-reporter-db
+    tag: v1.0.0
+  service:
+    type: ClusterIP
+    port: 5432
+  claim:
+    resources:
+      requests:
+        storage: 1Gi
+
+listener:
+  image:
+    repository: novyl/jtl-reporter-listener-service
+    tag: v2.1.2
+  service:
+    type: ClusterIP
+    port: 6000
+
+scheduler:
+  image:
+    repository: novyl/jtl-reporter-scheduler
+    tag: v0.0.8
+
+migration:
+  image:
+    repository: novyl/jtl-reporter-be
+    tag: v5.0.5
+  env:
+    DATABASE_URL: "postgres://postgres@db/jtl_report"

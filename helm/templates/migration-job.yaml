@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "migration.fullname" . }}
+  labels:
+    {{- include "jtl-reporter.labels" (dict "component" "migration" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "migration" "Release" .Release "Chart" .Chart "Values" .Values) | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migration
+          image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
+          imagePullPolicy: {{ .Values.migration.image.pullPolicy }}
+          command: ["npm", "run", "migrate", "up"]
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.migration.env.DATABASE_URL | quote }}
+            - name: OPT_OUT_ANALYTICS
+              value: "true"

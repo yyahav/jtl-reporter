@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fe
+  labels:
+    {{- include "jtl-reporter.labels" (dict "component" "fe" "Chart" .Chart "Release" .Release "Values" .Values) | nindent 4 }}
+spec:
+  type: {{ .Values.fe.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.fe.service.port }}
+      targetPort: http
+  selector:
+    {{- include "jtl-reporter.componentSelectorLabels" (dict "component" "fe" "Chart" .Chart "Release" .Release "Values" .Values) | nindent 4 }}

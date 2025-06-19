@@ -33,6 +33,28 @@ Online reporting application to generate reports from JMeter(Taurus), Locust and
   ```
   $ http://IP_ADDRESS:2020
   ```
+
+
+## Kubernetes deployment using Helm charts
+Follows is the basic procedure to deploy locally using minikube for testing, before deploying on the cloud (using CI/CD, kubectl etc.). See `values.yaml` in `helm` folder to change the configuration.
+1. Install Docker, [Minikube](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fbinary+download), [Helm](https://github.com/helm/helm/releases) and [kubectl](https://kubernetes.io/docs/tasks/tools/)
+2. Clone this repository and navigate to helm folder
+3. Run minikube, and deploy using helm
+
+  ```Shell
+  $ minikube start
+  $ helm install jtl-reporter . -f values.yaml
+  ```
+
+4. Then, you may want to forward the container port for localhost access
+
+  ```Shell
+  $ kubectl port-forward svc/fe 2020:2020
+  ```
+
+5. After forwarding the port, you can access this url in your browser: `http://localhost:2020/`
+
+
   
 ## Documentation 📖
 For additional information please refer to the [documentation](https://jtlreporter.site/docs/).
